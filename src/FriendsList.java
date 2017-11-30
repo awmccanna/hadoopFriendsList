@@ -14,6 +14,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -28,22 +29,19 @@ import org.apache.hadoop.util.GenericOptionsParser;
 public class FriendsList
 {
 	
-	public static class TokenMapper extends Mapper<Object, Text, Text, Set<Text>>
+	public static class TokenMapper extends Mapper<Object, Text, Text, Text>
 	{
-	    private Text word = new Text();   
-	    public void map(Object key, Text value, Context context) throws IOException, InterruptedException
+		public void map(Object key, Text value, Context context) throws IOException, InterruptedException
 	    {
-	    	
+	    	Text word = new Text();
+			String sVal = new String();
+			Text val = new Text();
     		String in = value.toString();
 	    	String[] strings = in.split(" ");
-	      
-				
-			
-			Set<Text> holder = new HashSet<Text>();
 			String c1 = strings[0];
 			for (int x=1; x<strings.length; x++)
 			{
-				holder.add(new Text(strings[x]));
+				sVal += strings[x] + " ";
 			}
 			for (int x=1; x<strings.length; x++)
 			{
@@ -55,7 +53,8 @@ public class FriendsList
 				{
 					word.set(c1+strings[x]);
 				}
-				context.write(word, holder);
+				val.set(sVal);
+				context.write(word, val);
 			}
 			
 			
@@ -63,24 +62,51 @@ public class FriendsList
 	}
 	
 	
-	public static class ListReducer extends Reducer<Text, Set<Text>, Text, Set<Text>>
+	public static class ListReducer extends Reducer<Text, Text, Text, Text>
 	{
-		Set<Text> result = new HashSet<Text>();
-		Set<Text> temp = new HashSet<Text>();
-		public void reduce(Text key, Iterable<Set<Text>> values, Context context) throws IOException, InterruptedException
+		
+		
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException
 		{
-			Iterator<Set<Text>> it = values.iterator();
+			
+			String f = new String();
+			String u = new String();
+			Iterator<Text> it = values.iterator();
+			Text t = it.next();
+			f = t.toString();
 			if(it.hasNext())
 			{
-				result = it.next();
+				Text e = it.next();
+				u = e.toString();
 			}
 			
-			while(it.hasNext())
+			String[] fSplit = f.split(" ");
+			String[] uSplit = u.split(" ");
+			
+			List<String> k = Arrays.asList(fSplit);
+			List<String> r = Arrays.asList(uSplit);
+			
+			String c = new String();
+			for(String m : k)
 			{
-				temp = it.next();
-				result.retainAll(temp);
+				c += m + " ";
 			}
-			context.write(key, result);
+			
+			for(String n : r)
+			{
+				if(c.contains(n))
+				{
+					c += n;	
+				}
+			}
+			
+			String[] cc = c.split(" ");
+			c =  cc[cc.length-1] ;
+			
+			
+			Text s = new Text(c);
+			
+			context.write(key, s);
 		}
 	}
 		
@@ -102,7 +128,7 @@ public class FriendsList
 		job.setCombinerClass(ListReducer.class);
 		job.setReducerClass(ListReducer.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Set.class);
+		job.setOutputValueClass(Text.class);
 		
 		for (int i = 0; i < otherArgs.length - 1; ++i)
 		{
