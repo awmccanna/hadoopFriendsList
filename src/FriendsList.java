@@ -10,16 +10,14 @@
 
 
 import java.io.IOException;
-import java.util.StringTokenizer;
+import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -30,54 +28,63 @@ import org.apache.hadoop.util.GenericOptionsParser;
 public class FriendsList
 {
 	
-	public static class tokenMapper extends Mapper<Object, Text, Text, Text>
+	public static class TokenMapper extends Mapper<Object, Text, Text, Set<Text>>
 	{
-	    private Text word = new Text();
-	    private Text val = new Text();
-	      
+	    private Text word = new Text();   
 	    public void map(Object key, Text value, Context context) throws IOException, InterruptedException
 	    {
-	    	//In case I can't guarantee one line at a time, tokeninze by \n, then run the following code on each token
-	    	StringTokenizer itr = new StringTokenizer(value.toString(), "\n");
-	    	while(itr.hasMoreTokens())
-	    	{
-	    		String in = itr.nextToken();
-		    	String[] strings = in.split(" ");
-		      
-				for(String s : strings)
-				{	
-					String[] result = s.split(" ");
-					String s1 = new String();
-					String c1 = result[0];
-					for (int x=1; x<result.length; x++)
-					{
-						s1 += result[x] + " ";
-					}
-					
-					for (int x=1; x<result.length; x++)
-					{
-						if(result[x].compareTo(c1) < 0)
-						{
-							word.set(result[x]+c1);
-						}
-						else
-						{
-							word.set(c1+result[x]);
-						}
-					}
-					val.set(s1);
-					context.write(word, val);
+	    	
+    		String in = value.toString();
+	    	String[] strings = in.split(" ");
+	      
+				
+			
+			Set<Text> holder = new HashSet<Text>();
+			String c1 = strings[0];
+			for (int x=1; x<strings.length; x++)
+			{
+				holder.add(new Text(strings[x]));
+			}
+			for (int x=1; x<strings.length; x++)
+			{
+				if(strings[x].compareTo(c1) < 0)
+				{
+					word.set(strings[x]+c1);
 				}
-	    	}
+				else
+				{
+					word.set(c1+strings[x]);
+				}
+				context.write(word, holder);
+			}
+			
+			
 	    }
 	}
 	
-	public static class listReducer extends Reducer<Text, Text, Text, Text>
+	
+	public static class ListReducer extends Reducer<Text, Set<Text>, Text, Set<Text>>
 	{
-		
+		Set<Text> result = new HashSet<Text>();
+		Set<Text> temp = new HashSet<Text>();
+		public void reduce(Text key, Iterable<Set<Text>> values, Context context) throws IOException, InterruptedException
+		{
+			Iterator<Set<Text>> it = values.iterator();
+			if(it.hasNext())
+			{
+				result = it.next();
+			}
+			
+			while(it.hasNext())
+			{
+				temp = it.next();
+				result.retainAll(temp);
+			}
+			context.write(key, result);
+		}
 	}
-	
-	
+		
+		
 	public static void main(String[] args) throws Exception
 	{
 		Configuration conf = new Configuration();
@@ -87,14 +94,15 @@ public class FriendsList
 			System.err.println("Usage: wordcount <in> [<in>...] <out>");
 			System.exit(2);
 		}
+		
 		Job job = Job.getInstance(conf, "Friends list");
 		
 		job.setJarByClass(FriendsList.class);
-		job.setMapperClass(tokenMapper.class);
-		job.setCombinerClass(listReducer.class);
-		job.setReducerClass(listReducer.class);
+		job.setMapperClass(TokenMapper.class);
+		job.setCombinerClass(ListReducer.class);
+		job.setReducerClass(ListReducer.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		job.setOutputValueClass(Set.class);
 		
 		for (int i = 0; i < otherArgs.length - 1; ++i)
 		{
@@ -105,30 +113,7 @@ public class FriendsList
 	}
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	
 	
 }
