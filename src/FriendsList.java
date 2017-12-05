@@ -1,7 +1,7 @@
 /**
  * Alex McCanna
  * CSCD 467 Final Project
- * Finding Friends using hadoop MapReduce
+ * Finding Friends using Hadoop MapReduce
  */
 
 import java.io.IOException;
@@ -42,7 +42,10 @@ public class FriendsList
 			String person1 = strings[0];
 			for (int x=1; x<strings.length; x++)
 			{
-				stringWord += strings[x] + ", ";
+				if(x != (strings.length-1))
+						stringWord += strings[x] + ", ";
+				else
+					stringWord += strings[x];
 			}
 			for (int x=1; x<strings.length; x++)
 			{
@@ -68,7 +71,8 @@ public class FriendsList
 		 * (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
 		 * Takes in the key and values generated in the Map function. There will be two KV pairs per entry.
-		 * The values are then split 
+		 * The values are then split into individual components by spaces, and the subsequent arrays are "intersected".
+		 * This produces the common friends, which is then written to context, and the HDFS will take care of the rest.
 		 */
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException
 		{
@@ -87,16 +91,12 @@ public class FriendsList
 			String[] fSplit = f.split(" ");
 			String[] uSplit = u.split(" ");
 			
-			List<String> k = Arrays.asList(fSplit);
-			List<String> r = Arrays.asList(uSplit);
-			
 			String c = new String();
-			for(String m : k)
+			for(String m : fSplit)
 			{
 				c += (m + " ");
 			}
-			
-			for(String n : r)
+			for(String n : uSplit)
 			{
 				if(c.contains(n))
 				{
