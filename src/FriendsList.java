@@ -4,17 +4,11 @@
  * Finding Friends using hadoop MapReduce
  */
 
-
-
-
-
-
 import java.io.IOException;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -28,36 +22,41 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 public class FriendsList
 {
-	
 	public static class TokenMapper extends Mapper<Object, Text, Text, Text>
 	{
+		/*
+		 * (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+		 * Map method for MapReduce process. Takes incoming line and parses it into a key and a value.
+		 * The key consists of the first person (string) and a second person from their friends list.
+		 * The value is everything after the first person, with comma separation added for readability further on.
+		 * This is then written to the context and sent to the Reduce function. 
+		 */
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException
 	    {
 	    	Text word = new Text();
-			String sVal = new String();
+			String stringWord = new String();
 			Text val = new Text();
     		String in = value.toString();
 	    	String[] strings = in.split(" ");
-			String c1 = strings[0];
+			String person1 = strings[0];
 			for (int x=1; x<strings.length; x++)
 			{
-				sVal += strings[x] + " ";
+				stringWord += strings[x] + ", ";
 			}
 			for (int x=1; x<strings.length; x++)
 			{
-				if(strings[x].compareTo(c1) < 0)
+				if(strings[x].compareTo(person1) < 0)
 				{
-					word.set(strings[x]+c1);
+					word.set(strings[x]+ "-" + person1);
 				}
 				else
 				{
-					word.set(c1+strings[x]);
+					word.set(person1 + "-" +strings[x]);
 				}
-				val.set(sVal);
+				val.set(stringWord);
 				context.write(word, val);
 			}
-			
-			
 	    }
 	}
 	
@@ -65,7 +64,12 @@ public class FriendsList
 	public static class ListReducer extends Reducer<Text, Text, Text, Text>
 	{
 		
-		
+		/*
+		 * (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+		 * Takes in the key and values generated in the Map function. There will be two KV pairs per entry.
+		 * The values are then split 
+		 */
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException
 		{
 			
@@ -89,7 +93,7 @@ public class FriendsList
 			String c = new String();
 			for(String m : k)
 			{
-				c += m + " ";
+				c += (m + " ");
 			}
 			
 			for(String n : r)
@@ -101,7 +105,7 @@ public class FriendsList
 			}
 			
 			String[] cc = c.split(" ");
-			c =  cc[cc.length-1] ;
+			c =  cc[cc.length-1];
 			
 			
 			Text s = new Text(c);
