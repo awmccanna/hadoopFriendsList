@@ -30,7 +30,8 @@ public class FriendsList
 		 * Map method for MapReduce process. Takes incoming line and parses it into a key and a value.
 		 * The key consists of the first person (string) and a second person from their friends list.
 		 * The value is everything after the first person, with comma separation added for readability further on.
-		 * This is then written to the context and sent to the Reduce function. 
+		 * This is then written to the context and sent to the Reduce function.
+		 * Incoming data must be formatted as "MainPerson friend1 friend2", with space separation and no delimiters.
 		 */
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException
 	    {
